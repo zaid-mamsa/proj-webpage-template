@@ -1,7 +1,252 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 1 here
-	</body>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+  body {
+    padding: 100px;
+    width: 1500px;
+    margin: auto;
+    text-align: left;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    color: #121212;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Source Sans Pro', sans-serif;
+  }
+  figcaption {
+    font-family: 'Source Sans Pro', sans-serif;
+	font-size: 10px;
+  }
+</style>
+<title>CS 184 Rasterizer</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+
+
+<body>
+
+<h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2023</h1>
+<h1 align="middle">Project 1: Rasterizer</h1>
+<h2 align="middle">Zaid Mamsa (zaid.mamsa@berkeley.edu)</h2>
+
+<br><br>
+
+<div>
+
+  <a href="../"><p align="middle">Back to Homepage</p></a>
+
+<h2 align="middle">Overview</h2>
+<p>TODO</p>
+
+<h2 align="middle">Task 1: Drawing Single-Color Triangles</h2>
+
+<p>In this task, I enabled drawing triangles by implementing the  <code> rasterize_triangle() </code> function. 
+  Triangle rasterization happens in the following steps:
+  <ol>
+    <li>
+      For the inputs (triangle vertices), I found the minimum and maximum x and y values. These values were my bounding box.
+    </li>
+    <li>
+      For every sample within the bounding box, I checked whether that center of sample pixel, <code> (x + 0.5, y + 0.5) </code> , 
+	  is within the bounds of the triangle. 
+	  I did this by implementing a helper method that uses barycentric coordinates to determine if a point is within a triangle.
+	  I only sampled within the bounding box, which proves that my algorithm is no worse than one that checks each sample within 
+	  the bounding box of the triangle.
+    </li>
+    <li>
+      If the sample point is located within the given triangle coordinates, then I set the color of that pixel to the given color 
+	  by calling the <code> fill_pixel() </code> function.
+    </li>
+  </ol>
+    The results of <code>basic/test4.svg</code> are shown below.
+  </p>
+
+  <div align="middle">
+    <table style="width=100%">
+      <tr>
+        <td>
+          <img src="images/basic4.png" align="middle" width="500px"/>
+          <figcaption align="middle"><code>basic/test4.svg</code> from Task 1.</figcaption>
+        </td>
+        <td>
+          <img src="images/basic4jaggies.png" align="middle" width="500px"/>
+          <figcaption align="middle">
+            <code>basic/test4.svg</code> with the pixel inspector highlighting the tip of the red triangle. 
+            Note there are jaggies from aliasing.
+          </figcaption>
+        </td>
+      </tr>
+      <br>
+    </table>
+  </div>
+
+  <br>
+
+<h2 align="middle">Task 2: Antialiasing by Supersampling</h2>
+<p>
+  In this task, I antialiased using supersampling. For each pixel, I took <code> sample_rate </code> 
+  (a number - either 1, 4, 9, or 16) samples within the pixel and averaged those colors to 
+  get the new color for the pixel. I expected this would make the pixels seem more blurred up close, but looking at 
+  the supersampled rasterized image displayed cleared images without any jaggies. 
+
+
+  <!-- For the data structure, we chose to use a large, higher-resolution sample buffer to store sub-pixel sampling values across different triangles, 
+  and we only average the value when resolving to the frame buffer. 
+  In this way, we avoid the loss of quality when a pixel is evaluated multiple times by different triangles 
+  (i.e., on the border). 
+  This comes with a higher memory cost that grows fast as the sampling rate increases. 
+  We always resize when the sampling rate changes to keep only the needed memory. -->
+</p>
+
+<p>
+  I implemented supersampling through the following steps:
+</p>
+
+<ol>
+  <li>
+    In the <code>set_sample_rate()</code> and <code>set_framebuffer_target()</code> functions, I resized  
+	the <code>sample_buffer</code> from \(\text{width}*\text{height}\) to 
+	\(\text{width}*\text{height}*\text{sample_rate}\) so it could contain all the sampling points 
+	depending on the <code>sample_rate</code>. It is helpful to resize whenever the sampling rate is changed 
+	so that the program only uses as much memory as it needs in <code>sample_buffer</code>.
+  </li>
+  <li>
+	I nested 2 more for loops that would equidistantly sample \(\sqrt{\text{sample_rate}} \) subpixels each within a pixel, 
+	hence a total of \(\sqrt{\text{sample_rate}} \ * \sqrt{\text{sample_rate}} \)  = \(\text{sample_rate} \) subpixels per pixel.
+	If the sample point in the center of the subpixel is located within the bounds of the triangle (same method as Task 1), 
+	the color of each subpixel is saved in the resized <code>sample_buffer</code>.
+  </li>
+  <li>
+	To set the color of the pixel in the <code>resolve_to_framebuffer()</code> method, I summed to color values of all the 
+	subpixels and divided by the <code>sample_rate</code> to get the average color for that pixel. I assigned the pixels' corresponding 
+	color in the <code>rgb_framebuffer_target</code> to display the image.
+  </li>
+</ol>
+
+<p>
+	A problem I ran into was that the black frame rectangle for all images started to lighten as I increased the <code>sample_rate</code>.
+	This was because <code>fill_pixel()</code> only set the color for one pixel in <code>sample_buffer</code> and it averaged out with the 
+	neighboring white pixels and lightened. I fixed this problem by supersampling the edges of the frames as well by using a nested for loop 
+	to update <code>sample_buffer</code> in <code>fill_pixel()</code> similar to how I implemented it in <code>rasterize_triangle()</code>. 
+	This ensured that the black frame stayed the same color as I modified <code>sample_rate</code>. 
+</p>
+
+<p>
+  This supersampling algorithm antialiased the rasterized triangles. 
+  <code>basic/test4.svg</code> images are shown below when <code>sample_rate</code> is 1, 4, and 16. 
+</p>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/basic4sr1default.png" align="middle" width="500px"/>
+        <figcaption align="middle"><code>basic/test4.svg</code> when sample_rate = 1.</figcaption>
+      </td>
+	  <td>
+        <img src="images/basic4sr4default.png" align="middle" width="500px"/>
+        <figcaption align="middle"><code>basic/test4.svg</code> when sample_rate = 4.</figcaption>
+      </td>
+	  <td>
+        <img src="images/basic4sr16default.png" align="middle" width="500px"/>
+        <figcaption align="middle"><code>basic/test4.svg</code> when sample_rate = 16.</figcaption>
+      </td>
+    </tr>
+    <br>
+    <tr>
+		<td>
+			<img src="images/basic4sr1.png" align="middle" width="500px"/>
+			<figcaption align="middle">
+				<code>basic/test4.svg</code> when sample_rate = 1. Pixel inspector shows the jagged tip of the thin triangle. 
+			</figcaption>
+		</td>
+		<td>
+			<img src="images/basic4sr4.png" align="middle" width="500px"/>
+			<figcaption align="middle">
+				<code>basic/test4.svg</code> when sample_rate = 4. Pixel inspector shows the tip of the thin triangle is becoming antialiased.
+			</figcaption>
+		</td>
+		<td>
+			<img src="images/basic4sr16.png" align="middle" width="500px"/>
+			<figcaption align="middle">
+				<code>basic/test4.svg</code> when sample_rate = 16. Pixel inspector shows the tip of the thin triangle is 
+				a little connected.
+			</figcaption>
+		</td>
+    </tr>
+    <br>
+  </table>
+</div>
+
+<p>
+  As I increased the sampling rate the edges and vertices become more smooth and the pixels are connected, therefore removing the jaggies. 
+  This higher resolution is observed because averaging the color of the pixel from its subpixels takes into account there 
+  being more than one triangle in a pixel, and it blends in the colors to eliminate the jaggies.
+</p>
+
+<br>
+
+<h2 align="middle">Task 3: Transforms</h2>
+<p>
+  In my_robot.svg, (Figure my_robot.svg), I modified cubeman's arms and legs so it looks like 
+  it is in the middle of doing a jumping jack. I also changed its color from red to dark blue.
+  Both parts of both legs are scaled by lengthening them from 0.6 to 0.8, and are rotated 45 degrees outward. 
+  Both arms are rotated 45 degrees upwards. And finally, there were some minor translations done to bring the 
+  arms and legs closer to the torso.
+</p>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/my_robot.png" align="middle" width="500px"/>
+        <figcaption align="middle">Figure my_robot.svg</figcaption>
+      </td>
+    </tr>
+    <br>
+  </table>
+</div>
+
+<br>
+
+<h2 align="middle">Task 4: Barycentric coordinates</h2>
+
+<p>
+  Task 4 answer.
+</p>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/test7tri.png" align="middle" width="500px"/>
+        <figcaption align="middle">Figure Rasterized Triangle</figcaption>
+      </td>
+      <td>
+        <img src="images/test7.png" align="middle" width="500px"/>
+        <figcaption align="middle">Figure svg/basic/test7.svg</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<h2 align="middle">Task 5: "Pixel sampling" for texture mapping</h2>
+<p>
+  Task 5 answer.
+</p>
+
+<h3 align="middle">Task 6: "Level sampling" with mipmaps for texture mapping</h3>
+
+  <p>
+    Task 6 answer.
+  </p>
+  
+
+
+<a href="https://zaid-mamsa.github.io/proj-webpage-template/proj1/">Link to project webpage</a>
+
+</body>
 </html>
