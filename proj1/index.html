@@ -215,7 +215,14 @@
 <h2 align="middle">Task 4: Barycentric coordinates</h2>
 
 <p>
-  Task 4 answer.
+  Barycentric coordinates are geometric coordinates that describe a point in relation to a triangle. 
+  They be seen as weights of the three vertices of a traingle, and determine the point's position.
+  These coordinates are often denoted by alpha, beta, and gamma, and the three are constrained to sum to 1. 
+  In Figure Rasterized Triangle below, for example, let's have alpha correspond to the red corner, beta to the blue corner, and 
+  gamma to the green corner. If alpha is 1, and beta and gamma are both 0, then the point will be weighed entirely to the red corner 
+  according to the system of equations for a point inside the triangle (x, y) and set of vertices {(x_0, y_0), (x_1, y_1), (x_2, y_2)}, 
+  where x = alpha*x_0 + beta*x_1 + gamma*x_2 and y = alpha*y_0 + beta*y_1 + gamma*y_2. However, if alpha = beta = gamma, then for this 
+  example, (x, y) would be directly in the center of the triangle.
 </p>
 
 <div align="middle">
@@ -235,10 +242,71 @@
 
 <h2 align="middle">Task 5: "Pixel sampling" for texture mapping</h2>
 <p>
-  Task 5 answer.
+	Pixel sampling is the process of determining the color of a pixel for an image by looking up a corresponding 
+	color value in a texture map. Additionally, texture mapping allows applying a texture to a 3D object. 
+	Using barycentric coordinates as discussed in Task 4, each point of a textured triangle can be mapped to uv 
+	coordinates on the textured image.
 </p>
 
-<h3 align="middle">Task 6: "Level sampling" with mipmaps for texture mapping</h3>
+<p>
+	The two types of pixel sampling I implemented are nearest neighbor and bilinear:
+</p>
+
+<p>
+	Nearest neighbor sampling selects the color of the nearest pixel in the texture map to the pixel being rendered. 
+	Bilinear interpolation, on the other hand, calculates the color of a pixel based on the weighted sum of the four nearest 
+	pixels in the texture map.
+</p>
+
+<div align="middle">
+	<table style="width=100%">
+	  <tr>
+		<td>
+		  <img src="images/texmap2sr1nearest.png" align="middle" width="500px"/>
+		  <figcaption align="middle"><code>texmap/test1.svg</code> when sample_rate = 1 and nearest neighbor sampling.</figcaption>
+		</td>
+		<td>
+		  <img src="images/texmap2sr1bilinear.png" align="middle" width="500px"/>
+		  <figcaption align="middle"><code>basic/test1.svg</code> when sample_rate = 1 and bilinear sampling.</figcaption>
+		</td>
+	  </tr>
+	  <br>
+	  <tr>
+		  <td>
+			  <img src="images/texmap2sr16nearest.png" align="middle" width="500px"/>
+			  <figcaption align="middle">
+				  <code>texmap/test1.svg</code> when sample_rate = 16 and nearest neighbor sampling.
+			  </figcaption>
+		  </td>
+		  <td>
+			  <img src="images/texmap2sr16bilinear.png" align="middle" width="500px"/>
+			  <figcaption align="middle">
+				  <code>texmap/test1.svg</code> when sample_rate = 16 and bilinear sampling.
+			  </figcaption>
+		  </td>
+	  </tr>
+	  <br>
+	</table>
+  </div>
+
+<p>
+	<code>texmap/test1.svg</code> demonstrates that bilinear sampling outperforms nearest neighbor sampling. Comparing the two for when 
+	the <code>sample_rate = 1</code>, the lines for longitude and latitude appear to be smoother with bilinear sampling. Although setting 
+	the <code>sample_rate = 16</code> drastically improves the smoothness for both sampling methods, bilinear sampling still 
+	antialiases the lines better than nearest neighbor sampling by removing most of the jaggies. In comparison, the nearest 
+	neighbor sampling rasterizes sharper images than the bilinear sampling, which makes images more blurred in an attempt to 
+	antialias by filtering high frequencies.
+</p>
+
+<p>
+	It can be noted that even though nearest neighbor sampling is fast and simple, however it can result in aliased artifacts when the 
+	texture is magnified, as shown above. Bilinear sampling renders smoother and accurately, but is expensive in terms of compute relative 
+	to nearest neighbor sampling and does not produce as sharp of an image. There will be a large difference between the two methods depending 
+	on the magnification of the texture: nearest neighbor sampling can result in jaggies when magnified and loss of detail (texels) when minified, 
+	but it is simpler. Bilinear sampling will produce a better and smoother result but is more expensive.
+</p>
+
+<h2 align="middle">Task 6: "Level sampling" with mipmaps for texture mapping</h2>
 
   <p>
     Task 6 answer.
