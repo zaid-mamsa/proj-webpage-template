@@ -97,14 +97,6 @@
   (a number - either 1, 4, 9, or 16) samples within the pixel and averaged those colors to 
   get the new color for the pixel. I expected this would make the pixels seem more blurred up close, but looking at 
   the supersampled rasterized image displayed cleared images without any jaggies. 
-
-
-  <!-- For the data structure, we chose to use a large, higher-resolution sample buffer to store sub-pixel sampling values across different triangles, 
-  and we only average the value when resolving to the frame buffer. 
-  In this way, we avoid the loss of quality when a pixel is evaluated multiple times by different triangles 
-  (i.e., on the border). 
-  This comes with a higher memory cost that grows fast as the sampling rate increases. 
-  We always resize when the sampling rate changes to keep only the needed memory. -->
 </p>
 
 <p>
