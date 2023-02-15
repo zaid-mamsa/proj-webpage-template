@@ -39,7 +39,13 @@
   <a href="../"><p align="middle">Back to Homepage</p></a>
 
 <h2 align="middle">Overview</h2>
-<p>TODO</p>
+<p>In this assignment I implemented the code to rasterize triangles and render SVG images. I also enabled additional features/functionalities 
+  such as supersampling, transformations, color interpolation, and sampling for texture mapping. Supersampling rendered the edges smoother 
+  along the rasterized triangles. I learned about barycentric coordinates and used them to interpolate color in the rasterizations. Lastly, I 
+  utilized mipmaps to implement different pixel and texture sampling methods which made anti-aliasing more efficient than supersampling.
+</p>
+
+<br>
 
 <h2 align="middle">Task 1: Drawing Single-Color Triangles</h2>
 
@@ -309,12 +315,99 @@
 <h2 align="middle">Task 6: "Level sampling" with mipmaps for texture mapping</h2>
 
   <p>
-    Task 6 answer.
+    Level sampling is a technique to improve the rendering of textures on 3D models by mapping textures of 2D images 
+	onto the surfaces of 3D models to give them more detail. The texture is stored and sampling is reduced. Then the level 
+	of the mipmap is selected based on the level with the closest sampling rate. 
   </p>
   
+  <p>
+    I implemented level sampling for texture mapping by first determining <code>p_uv</code>, <code>p_dx_uv</code>, and <code>p_dy_uv</code> 
+	as barycentric coordinates and setting them in the SampleParams struct. Then, I calculated the appropriate mipmap level using 
+	the barycentric coordinates. I subtracted <code>p_uv</code> from both <code>p_dx_uv</code> and <code>p_dy_uv</code>, and then 
+	scaled the results (2 2D Vectors) by another vector containing the width and height of the screen. I took the max norm of these 
+	2 new vectors, and then log2(max norm) to calculate the level, clamping the result between 0 and the mipmap's max level.
+  </p>
 
+  <p>
+    If the input level sampling method (LSM) is <code>L_ZERO</code>, then I call the corresponding pixel sampling method (PSM, which I discussed 
+	in Task 5 above) with level 0. If the LSM is <code>L_NEAREST</code>, then I call the PSM with the level I calculated above. However, if the 
+	LSM is <code>L_BILINEAR</code>, then I want to get a weighted averaged of calling the corresponding PSM with the calculated level rounded down 
+	(floored) and rounded up (ceiled). The weights are determined by getting the difference of the calculated level and the floored/ceiled level.
+  </p>
 
-<a href="https://zaid-mamsa.github.io/proj-webpage-template/proj1/">Link to project webpage</a>
+  <h3>Speed</h3>
+
+  <p>
+    In terms of speed, supersampling is the slowest since it requires sampling multiple points per pixel. Relative to supersampling, 
+	pixel sampling is faster since it requires just three lerps to weight against sampling from four pixels. Level sampling is the fastest 
+	of the three since at most it requires just one lerp to weight against sampling from two mipmap levels.
+  </p>
+
+  <h3>Memory Usage</h3>
+
+  <p>
+    For memory usage, supersampling requires the most memory because we store all our samples and supersamples in a <code>sample_buffer</code> 
+	that is <code>sample_rate</code>x larger than the normal rasterization buffer. Level sampling is better in terms of memory since 
+	mipmaps and their levels need to be stored somehow. Althought pixel sampling may require more lerps, there is no need for additional mipmap 
+	storage since it is sampled with mipmap level 0. Therefore, pixel sampling has the most optimal memory usage.
+  </p>
+
+  <h3>Antialiasing Power</h3>
+
+  <p>
+    When it comes to antialiasing power, level sampling does not do as good of a job compared to the other two methods most likely because it 
+	is efficient and simple in compute, only taking one lerp and sampling two mipmap levels max. Pixel sampling is better at a higher 
+	<code>sample_rate</code>, because this allows more blur along the pixel boundaries. Supersampling has the strongest antialiasing power, 
+	especially for edges, simply because it requires the most memory and sampling as the <code>sample_rate</code> increases!
+  </p>
+
+  <h3> Testing on my own .png file</h3>
+
+  <p>Below we compare L_ZERO and L_NEAREST level sampling as well as P_NEAREST and P_LINEAR pixel sampling:</p>
+
+  <div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/lzpn.png" align="middle" width="500px"/>
+        <figcaption align="middle"><code>house.svg</code>  - L_ZERO sample with P_NEAREST pixel sampling.</figcaption>
+      </td>
+	    <td>
+        <img src="images/lzpl.png" align="middle" width="500px"/>
+        <figcaption align="middle"><code>house.svg</code> - L_ZERO sample with P_LINEAR pixel sampling.</figcaption>
+      </td>
+    </tr>
+    <br>
+    <tr>
+      <td>
+        <img src="images/lnpn.png" align="middle" width="500px"/>
+        <figcaption align="middle">
+          <code>house.svg</code>  - L_NEAREST sample with P_NEAREST pixel sampling.
+        </figcaption>
+      </td>
+      <td>
+        <img src="images/lnpl.png" align="middle" width="500px"/>
+        <figcaption align="middle">
+          <code>house.svg</code> - L_NEAREST sample with P_LINEAR pixel sampling.
+        </figcaption>
+      </td>
+    </tr>
+    <br>
+  </table>
+</div>
+
+<p>Above, it can be seen that L_NEAREST's use of another mipmap level helps antialias the pixels along the edges of triangles. 
+  Additionally, P_LINEAR significantly helps blur and antialias the image even stronger, and also interpolates the textured pixels 
+  in the image. 
+</p>
+
+<h2 align="middle">Thanks for reading!</h2>
+
+<br>
+
+<h3>Link to project webpage at 
+  <a href="https://zaid-mamsa.github.io/proj-webpage-template/proj1/">https://zaid-mamsa.github.io/proj-webpage-template/proj1/</a>
+</h3>
 
 </body>
 </html>
